@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "lib/solmate/src/tokens/ERC20.sol";
 
-contract PaillerToken is ERC20 {
+contract FHEToken is ERC20 {
     address payable public owner;
 
     event Deposit(address indexed from, uint256 amount);
@@ -27,12 +27,19 @@ contract PaillerToken is ERC20 {
     Tx[] public mempool;
     mapping(uint256 => Confirmedblocks) confirmedblocks;
 
-    constructor(uint8 _decimals) ERC20("PaillerToken", "Pai", _decimals) {
+    constructor(uint8 _decimals) ERC20("FHEToken", "FHT", _decimals) {
         owner = payable(msg.sender);
     }
 
-    function recvTx(bytes32 _to, bytes32 _sharedKey, bytes32 _amount) payable public {
-        require(msg.value == fees, "PaillerToken: amount must be equal to fees");
+    function recvTx(
+        bytes32 _to,
+        bytes32 _sharedKey,
+        bytes32 _amount
+    ) public payable {
+        require(
+            msg.value == fees,
+            "FHEToken: amount must be equal to fees"
+        );
 
         last_tx_id += 1;
 
@@ -68,6 +75,7 @@ contract PaillerToken is ERC20 {
     }
 
     event ReveivedEther(address indexed from, uint256 amount);
+
     receive() external payable {
         emit ReveivedEther(msg.sender, msg.value);
 

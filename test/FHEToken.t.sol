@@ -2,18 +2,18 @@
 pragma solidity ^0.8.13;
 
 import "lib/forge-std/src/Test.sol";
-import "src/PaillerToken.sol";
+import "src/FHEToken.sol";
 
 contract ERC20Test is Test {
-    PaillerToken public paillerToken;
+    FHEToken public fheToken;
 
     address public owner;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
 
     function setUp() public {
-        paillerToken = new PaillerToken(8);
-        owner = paillerToken.owner();
+        fheToken = new FHEToken(8);
+        owner = fheToken.owner();
         deal(alice, 100 ether);
         deal(bob, 100 ether);
     }
@@ -22,9 +22,9 @@ contract ERC20Test is Test {
         vm.startPrank(alice);
         uint256 amount = 10 ether;
 
-        (bool sent, ) = address(paillerToken).call{value: amount}("");
+        (bool sent, ) = address(fheToken).call{value: amount}("");
 
-        assertEq(paillerToken.balance(alice), amount);
+        assertEq(fheToken.balance(alice), amount);
         vm.stopPrank();
     }
 
@@ -34,7 +34,7 @@ contract ERC20Test is Test {
         bytes32 amount = bytes32(uint256(0.1 ether));
 
         vm.startPrank(alice);
-        (bool sent, ) = address(paillerToken).call{value: 0}(
+        (bool sent, ) = address(fheToken).call{value: 0}(
             abi.encodeWithSignature(
                 "recvTx(bytes32,bytes32,bytes32)",
                 to,
@@ -49,7 +49,7 @@ contract ERC20Test is Test {
             bytes32 _to,
             bytes32 _sharedKey,
             bytes32 _amount
-        ) = paillerToken.mempool(0);
+        ) = fheToken.mempool(0);
 
         assertEq(sent, true);
         assertEq(_id, 1);
