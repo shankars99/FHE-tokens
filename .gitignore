@@ -12,3 +12,9 @@ docs/
 
 # Dotenv file
 .env
+*.key
+
+# Added by cargo
+
+/target
+Cargo.lock
