@@ -29,34 +29,36 @@ contract ERC20Test is Test {
     }
 
     function testRecvTx() public {
-        bytes32 to = keccak256(abi.encodePacked(bob));
-        bytes32 sharedKey = keccak256(abi.encodePacked(alice, bob));
-        bytes32 amount = bytes32(uint256(0.1 ether));
+        address to = bob;
+
+        // REPLACE WITH REAL FHE TX AND PROOF
+        bytes memory fhe_tx = "fhe_tx";
+        bytes memory proof = "proof";
 
         vm.startPrank(alice);
         (bool sent, ) = address(fheToken).call{value: 0}(
             abi.encodeWithSignature(
-                "recvTx(bytes32,bytes32,bytes32)",
+                "recvTx(address,bytes,bytes)",
                 to,
-                sharedKey,
-                amount
+                fhe_tx,
+                proof
             )
         );
 
         (
             uint8 _id,
             address _from,
-            bytes32 _to,
-            bytes32 _sharedKey,
-            bytes32 _amount
+            address _to,
+            bytes memory _fhe_tx,
+            bytes memory _proof
         ) = fheToken.mempool(0);
 
         assertEq(sent, true);
         assertEq(_id, 1);
         assertEq(_from, alice);
         assertEq(_to, to);
-        assertEq(_sharedKey, sharedKey);
-        assertEq(_amount, amount);
+        assertEq(_fhe_tx, fhe_tx);
+        assertEq(_proof, proof);
         vm.stopPrank();
     }
 }
