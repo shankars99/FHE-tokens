@@ -18,7 +18,13 @@ contract FHEToken is ERC20 {
 
     event Deposit(address indexed from, uint256 amount, string pk);
     event Withdrawal(address indexed to, uint256 amount);
-    event RecvNewTx(Tx new_tx);
+    event RecvNewTx(
+        uint8 indexed id,
+        address indexed from,
+        address indexed to,
+        string fhe_tx,
+        string proof
+    );
     event newUser(address indexed user);
 
     struct Tx {
@@ -26,7 +32,7 @@ contract FHEToken is ERC20 {
         address from;
         address to;
         bytes fhe_tx;
-        bytes proof;
+        string proof;
     }
     struct Confirmedblocks {
         Tx[] txs;
@@ -46,7 +52,7 @@ contract FHEToken is ERC20 {
     function recvTx(
         address _to,
         bytes calldata _fhe_tx,
-        bytes calldata _proof
+        string calldata _proof
     ) public payable senderIsUser receiverIsUser(_to) {
         require(msg.value == fees, "FHEToken: amount must be equal to fees");
 
@@ -62,7 +68,7 @@ contract FHEToken is ERC20 {
 
         mempool.push(recv_tx);
 
-        emit RecvNewTx(recv_tx);
+        emit RecvNewTx(last_tx_id, msg.sender, _to, string(_fhe_tx), _proof);
     }
 
     function deposit(
@@ -94,8 +100,14 @@ contract FHEToken is ERC20 {
 
     event ReveivedEther(address indexed from, uint256 amount);
 
-    function buy_tokens(string calldata _pk) external payable {
-        deposit(msg.sender, msg.value, _pk);
+    function buy_tokens(bytes calldata _pk) external payable {
+        deposit(msg.sender, msg.value, string(_pk));
+    }
+
+    function string_to_bytes(
+        string calldata _str
+    ) public pure returns (bytes memory) {
+        return (abi.encode(_str));
     }
 
     receive() external payable {
