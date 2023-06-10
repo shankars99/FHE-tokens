@@ -19,7 +19,7 @@ contract FHEToken is ERC20 {
     event Deposit(address indexed from, uint256 amount, string pk);
     event Withdrawal(address indexed to, uint256 amount);
     event RecvNewTx(
-        uint8 indexed id,
+        uint256 indexed id,
         address indexed from,
         address indexed to,
         string fhe_tx,
@@ -28,7 +28,7 @@ contract FHEToken is ERC20 {
     event newUser(address indexed user);
 
     struct Tx {
-        uint8 id;
+        uint256 id;
         address from;
         address to;
         bytes fhe_tx;
@@ -38,7 +38,7 @@ contract FHEToken is ERC20 {
         Tx[] txs;
     }
 
-    uint8 public last_tx_id = 0;
+    uint256 public last_tx_id = 0;
     uint256 public fees = 0 ether;
 
     Tx[] public mempool;
@@ -52,7 +52,7 @@ contract FHEToken is ERC20 {
     function recvTx(
         address _to,
         bytes calldata _fhe_tx,
-        string calldata _proof
+        bytes calldata _proof
     ) public payable senderIsUser receiverIsUser(_to) {
         require(msg.value == fees, "FHEToken: amount must be equal to fees");
 
@@ -63,18 +63,24 @@ contract FHEToken is ERC20 {
             from: msg.sender,
             to: _to,
             fhe_tx: _fhe_tx,
-            proof: _proof
+            proof: string(_proof)
         });
 
         mempool.push(recv_tx);
 
-        emit RecvNewTx(last_tx_id, msg.sender, _to, string(_fhe_tx), _proof);
+        emit RecvNewTx(
+            last_tx_id,
+            msg.sender,
+            _to,
+            string(_fhe_tx),
+            string(_proof)
+        );
     }
 
     function deposit(
         address _to,
         uint256 _amount,
-        string calldata _pk
+        bytes calldata _pk
     ) internal {
         _mint(_to, _amount);
 
@@ -83,7 +89,7 @@ contract FHEToken is ERC20 {
             emit newUser(_to);
         }
 
-        emit Deposit(_to, _amount, _pk);
+        emit Deposit(_to, _amount, string(_pk));
     }
 
     function withdrawal(uint256 _amount) public senderIsUser {
@@ -101,7 +107,7 @@ contract FHEToken is ERC20 {
     event ReveivedEther(address indexed from, uint256 amount);
 
     function buy_tokens(bytes calldata _pk) external payable {
-        deposit(msg.sender, msg.value, string(_pk));
+        deposit(msg.sender, msg.value, _pk);
     }
 
     function string_to_bytes(

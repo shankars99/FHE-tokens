@@ -6,61 +6,53 @@ import "src/FHEToken.sol";
 
 contract ERC20Test is Test {
     FHEToken public fheToken;
-
+    FHEToken public callableFHEToken;
     address public owner;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
+    address mallory = makeAddr("mallory");
 
-    function setUp() public {
+    constructor() {
         fheToken = new FHEToken(8);
+        callableFHEToken = FHEToken(payable(address(fheToken)));
         owner = fheToken.owner();
         deal(alice, 100 ether);
         deal(bob, 100 ether);
+
+        bytes memory pk_bytes = "pk_bytes";
+
+        // call buy_tokens to make alice and bob users by sending 0.1 ether
+        // Prank the `alice` account
+        vm.prank(alice);
+
+        // Call `buy_tokens` function with the `pk_bytes` parameter
+        (bool sent, ) = address(fheToken).call{value: 0.1 ether}(
+            abi.encodeWithSignature("buy_tokens(bytes)", pk_bytes)
+        );
+
+        // Assert that the transaction was sent successfully
+        assertEq(sent, true);
+
+        vm.prank(bob);
+        (sent, ) = address(fheToken).call{value: 0.1 ether}(
+            abi.encodeWithSignature("buy_tokens(bytes)", pk_bytes)
+        );
+
+        assertEq(sent, true);
+
+        vm.stopPrank();
     }
 
-    function testDeposit() public {
-        assert(1 == 1);
-        // vm.startPrank(alice);
-        // uint256 amount = 10 ether;
+    function testDepositFromUsersPass() public {
+        bool aliceExists = callableFHEToken.hasUser(alice);
+        assertEq(aliceExists, true);
 
-        // (bool sent, ) = address(fheToken).call{value: amount}("");
+        bool bobExists = callableFHEToken.hasUser(bob);
+        assertEq(bobExists, true);
+    }
 
-        // assertEq(fheToken.balance(alice), amount);
-        // vm.stopPrank();
+    function testDepositFromNonUsersFail() public {
+        bool malloryExists = callableFHEToken.hasUser(mallory);
+        assertEq(malloryExists, false);
     }
 }
-
-//     function testRecvTx() public {
-//         address to = bob;
-
-//         // REPLACE WITH REAL FHE TX AND PROOF
-//         bytes memory fhe_tx = "fhe_tx";
-//         bytes memory proof = "proof";
-
-//         vm.startPrank(alice);
-//         (bool sent, ) = address(fheToken).call{value: 0}(
-//             abi.encodeWithSignature(
-//                 "recvTx(address,bytes,bytes)",
-//                 to,
-//                 fhe_tx,
-//                 proof
-//             )
-//         );
-
-//         (
-//             uint8 _id,
-//             address _from,
-//             address _to,
-//             bytes memory _fhe_tx,
-//             bytes memory _proof
-//         ) = fheToken.mempool(0);
-
-//         assertEq(sent, true);
-//         assertEq(_id, 1);
-//         assertEq(_from, alice);
-//         assertEq(_to, to);
-//         assertEq(_fhe_tx, fhe_tx);
-//         assertEq(_proof, proof);
-//         vm.stopPrank();
-//     }
-// }
