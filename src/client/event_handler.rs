@@ -42,7 +42,7 @@ pub async fn recvnewtx_handler(url: &str, contract_addr: &str, start_block: u64)
     let client = Arc::new(provider);
     let filter = Filter::new()
         .address(contract_addr.parse::<Address>()?)
-        .event("RecvNewTx(uint8,address,address,string,string)")
+        .event("RecvNewTx(uint256,address,address,string,string)")
         .from_block(start_block);
     let logs = client.get_logs(&filter).await?;
 
@@ -61,6 +61,11 @@ pub async fn recvnewtx_handler(url: &str, contract_addr: &str, start_block: u64)
 
         for (i, token) in decoded.iter().enumerate() {
             match token {
+                Token::Uint(uint) => {
+                    // Handle Uint value
+                    let uint_value: U256 = uint.into();
+                    println!("{}:{}", event_names[i], uint_value);
+                }
                 Token::String(string) => {
                     // Handle Bytes value
                     let string_value: String = string.into();
