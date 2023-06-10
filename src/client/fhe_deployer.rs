@@ -2,6 +2,9 @@ use crate::client::account_handler::{get_keys, KeyPair};
 use std::process::Command;
 use std::str;
 
+// store the deployed address so that we can use it in other tests
+static mut DEPLOYED_ADDRESS: Option<String> = None;
+
 fn run_deployers_script(owner: &str) -> Option<String> {
     let output = Command::new("/home/shankar/.foundry/bin/forge")
         .arg("create")
@@ -23,6 +26,10 @@ fn run_deployers_script(owner: &str) -> Option<String> {
                 .nth(1)
                 .map(|address| address.trim().to_string())
                 .unwrap();
+
+            unsafe {
+                DEPLOYED_ADDRESS = Some(deployed_to.clone());
+            }
             return Some(deployed_to);
         }
     } else {
@@ -33,15 +40,23 @@ fn run_deployers_script(owner: &str) -> Option<String> {
     None
 }
 
+pub fn get_deployed_address() -> &'static str {
+    unsafe {
+        if DEPLOYED_ADDRESS.is_none() {
+            // The contract isn't deployed yet, so deploy it
+            println!("Deploying contract...");
+            let owner = get_keys("owner").unwrap();
+            run_deployers_script(owner.public_key);
+        }
+        DEPLOYED_ADDRESS.as_ref().map(|s| s.as_str()).unwrap()
+    }
+}
+
 #[test]
 fn test_deployer() {
-    let owner = get_keys("owner").unwrap();
-    let deployed_to = run_deployers_script(owner.public_key);
-    if let Some(deployed_address) = deployed_to {
-        println!("Contract deployed to: {}", deployed_address);
-        assert!(!deployed_address.is_empty());
-    } else {
-        println!("Failed to deploy contract");
-        assert!(false);
+    unsafe {
+        assert!(DEPLOYED_ADDRESS.is_none());
+        println!("DEPLOYED_ADDRESS = {:?}", get_deployed_address());
+        assert!(DEPLOYED_ADDRESS.is_some());
     }
 }
