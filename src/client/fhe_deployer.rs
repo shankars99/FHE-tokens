@@ -8,7 +8,7 @@ static mut DEPLOYED_ADDRESS: Option<String> = None;
 fn run_deployers_script(owner: &str) -> Option<String> {
     let output = Command::new("/home/shankar/.foundry/bin/forge")
         .arg("create")
-        .arg("src/FHEToken.sol:FHEToken")
+        .arg("src/contracts/FHEToken.sol:FHEToken")
         .arg("--constructor-args")
         .arg("8")
         .arg("--unlocked")
