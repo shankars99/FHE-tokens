@@ -6,10 +6,13 @@ use rand::{rngs::OsRng, thread_rng};
 use std::sync::Arc;
 
 mod fhe_oracle;
+mod client {
+    pub mod account_handler;
+    pub mod fhe_deployer;
+    pub mod event_handler;
+}
 use fhe_oracle::*;
-
-mod event_handler;
-use event_handler::*;
+use client::event_handler::*;
 
 struct User {
     name: String,
