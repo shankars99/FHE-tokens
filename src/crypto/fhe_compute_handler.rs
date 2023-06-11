@@ -9,7 +9,7 @@ use crate::crypto::fhe_oracle;
 
 use fhe_oracle::{Oracle, OracleUser};
 
-struct User {
+pub struct User {
     address: String,
     key_path: String,
     der_key: String,
@@ -89,7 +89,7 @@ fn user_balance(user: &User) -> u64 {
     decrypted_vector[0]
 }
 
-fn create_user(
+pub(crate) fn create_user(
     address: String,
     parameters: Arc<fhe::bfv::BfvParameters>,
     der_key: Option<String>,
@@ -109,7 +109,7 @@ fn create_user(
         Plaintext::try_encode(&[start_balance], Encoding::poly(), &parameters).unwrap();
     let fhe_balance: Ciphertext = sk.try_encrypt(&balance, &mut rng).unwrap();
 
-    User::new(address, key_path, der_key, sk, pk, fhe_balance)
+    User::new(address, key_path, der_key, sk, pk, fhe_balance).clone()
 }
 
 fn setup(alice_balance: u64, bob_balance: u64) -> (Oracle, User, User) {
@@ -145,34 +145,6 @@ fn setup(alice_balance: u64, bob_balance: u64) -> (Oracle, User, User) {
     fhe_oracle.add_user(bob.address.clone(), oracle_bob);
 
     (fhe_oracle, alice, bob)
-}
-
-fn main() {
-    let (fhe_oracle, mut alice, mut bob) = setup(100, 50);
-
-    let parameters = fhe_oracle.parameters.clone();
-
-    println!("Creating users...");
-    user_balance(&alice);
-    user_balance(&bob);
-
-    println!("\nBob public key: {:?}", bob.pk);
-    println!("\nAlice public key: {:?}", alice.pk);
-
-    println!("\nCreating tx where alice sends 50 to bob...");
-    let (new_fhe_balance_alice, new_fhe_balance_bob) = create_tx(
-        &fhe_oracle,
-        alice.clone(),
-        bob.clone(),
-        50,
-        parameters.clone(),
-    );
-    alice.update_fhe_balance(new_fhe_balance_alice);
-    bob.update_fhe_balance(new_fhe_balance_bob);
-
-    println!("\nChecking balances...");
-    user_balance(&alice);
-    user_balance(&bob);
 }
 
 #[cfg(test)]
