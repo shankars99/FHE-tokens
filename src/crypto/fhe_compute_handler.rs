@@ -175,54 +175,59 @@ fn main() {
     user_balance(&bob);
 }
 
-#[test]
-fn test_create_users() {
-    let init_alice_balance = 100;
-    let init_bob_balance = 50;
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    let (fhe_oracle, alice, bob) = setup(init_alice_balance, init_bob_balance);
+    #[test]
+    fn test_create_users() {
+        let init_alice_balance = 100;
+        let init_bob_balance = 50;
 
-    assert!(
-        user_balance(&alice) == init_alice_balance,
-        "Alice's balance is incorrect"
-    );
-    assert!(
-        user_balance(&bob) == init_bob_balance,
-        "Bob's balance is incorrect"
-    );
-}
+        let (fhe_oracle, alice, bob) = setup(init_alice_balance, init_bob_balance);
 
-#[test]
-fn test_tx_send_and_receive() {
-    let init_alice_balance = 100;
-    let init_bob_balance = 50;
-    let delta_balance = 10;
+        assert!(
+            user_balance(&alice) == init_alice_balance,
+            "Alice's balance is incorrect"
+        );
+        assert!(
+            user_balance(&bob) == init_bob_balance,
+            "Bob's balance is incorrect"
+        );
+    }
 
-    let (fhe_oracle, alice, bob) = setup(init_alice_balance, init_bob_balance);
+    #[test]
+    fn test_tx_send_and_receive() {
+        let init_alice_balance = 100;
+        let init_bob_balance = 50;
+        let delta_balance = 10;
 
-    let (new_fhe_balance_alice, new_fhe_balance_bob) = create_tx(
-        &fhe_oracle,
-        alice.clone(),
-        bob.clone(),
-        delta_balance,
-        fhe_oracle.parameters.clone(),
-    );
-    let alice = User {
-        fhe_balance: new_fhe_balance_alice,
-        ..alice
-    };
+        let (fhe_oracle, alice, bob) = setup(init_alice_balance, init_bob_balance);
 
-    let bob = User {
-        fhe_balance: new_fhe_balance_bob,
-        ..bob
-    };
+        let (new_fhe_balance_alice, new_fhe_balance_bob) = create_tx(
+            &fhe_oracle,
+            alice.clone(),
+            bob.clone(),
+            delta_balance,
+            fhe_oracle.parameters.clone(),
+        );
+        let alice = User {
+            fhe_balance: new_fhe_balance_alice,
+            ..alice
+        };
 
-    assert!(
-        user_balance(&alice) == init_alice_balance - delta_balance,
-        "Alice's balance is incorrect"
-    );
-    assert!(
-        user_balance(&bob) == init_bob_balance + delta_balance,
-        "Bob's balance is incorrect"
-    );
+        let bob = User {
+            fhe_balance: new_fhe_balance_bob,
+            ..bob
+        };
+
+        assert!(
+            user_balance(&alice) == init_alice_balance - delta_balance,
+            "Alice's balance is incorrect"
+        );
+        assert!(
+            user_balance(&bob) == init_bob_balance + delta_balance,
+            "Bob's balance is incorrect"
+        );
+    }
 }

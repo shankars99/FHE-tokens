@@ -13,7 +13,7 @@ use std::{sync::Arc, u8};
 
 use std::convert::TryFrom;
 
-pub async fn deposit_handler(url: &str, contract_addr: &str, start_block: u64) -> Result<()> {
+pub async fn deposit_event_handler(url: &str, contract_addr: &str, start_block: u64) -> Result<()> {
     let provider = Provider::<Http>::try_from(url)?;
     let client = Arc::new(provider);
     let filter = Filter::new()
@@ -40,7 +40,11 @@ pub async fn deposit_handler(url: &str, contract_addr: &str, start_block: u64) -
     Ok(())
 }
 
-pub async fn recvnewtx_handler(url: &str, contract_addr: &str, start_block: u64) -> Result<()> {
+pub async fn recvnewtx_event_handler(
+    url: &str,
+    contract_addr: &str,
+    start_block: u64,
+) -> Result<()> {
     let provider = Provider::<Http>::try_from(url)?;
     let client = Arc::new(provider);
     let filter = Filter::new()
@@ -81,22 +85,30 @@ pub async fn recvnewtx_handler(url: &str, contract_addr: &str, start_block: u64)
     Ok(())
 }
 
-#[tokio::test]
-async fn test_deposit_listener() {
-    let url = "http://127.0.0.1:8545";
-    let contract_addr = get_deployed_address();
-    let start_block = 0;
-    let res = deposit_handler(url, contract_addr, start_block).await;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::client::fhe_deployer::get_deployed_address;
+    use ethers::providers::Http;
+    use std::convert::TryFrom;
 
-    assert!(res.is_ok());
-}
+    #[tokio::test]
+    async fn test_deposit_listener() {
+        let url = "http://127.0.0.1:8545";
+        let contract_addr = get_deployed_address();
+        let start_block = 0;
+        let res = deposit_event_handler(url, contract_addr, start_block).await;
 
-#[tokio::test]
-async fn test_recvtx_listener() {
-    let url = "http://127.0.0.1:8545";
-    let contract_addr = get_deployed_address();
-    let start_block = 0;
-    let res = recvnewtx_handler(url, contract_addr, start_block).await;
+        assert!(res.is_ok());
+    }
 
-    assert!(res.is_ok());
+    #[tokio::test]
+    async fn test_recvtx_listener() {
+        let url = "http://127.0.0.1:8545";
+        let contract_addr = get_deployed_address();
+        let start_block = 0;
+        let res = recvnewtx_event_handler(url, contract_addr, start_block).await;
+
+        assert!(res.is_ok());
+    }
 }

@@ -5,7 +5,8 @@ use std::str;
 // store the deployed address so that we can use it in other tests
 static mut DEPLOYED_ADDRESS: Option<String> = None;
 
-fn run_deployers_script(owner: &str) -> Option<String> {
+// executes forge create src/contracts/FHEToken.sol:FHEToken --constructor-args 8 --unlocked --from <owner>
+fn deployer(owner: &str) -> Option<String> {
     let output = Command::new("/home/shankar/.foundry/bin/forge")
         .arg("create")
         .arg("src/contracts/FHEToken.sol:FHEToken")
@@ -46,17 +47,22 @@ pub fn get_deployed_address() -> &'static str {
             // The contract isn't deployed yet, so deploy it
             println!("Deploying contract...");
             let owner = get_keys("owner").unwrap();
-            run_deployers_script(owner.public_key);
+            deployer(owner.public_key);
         }
         DEPLOYED_ADDRESS.as_ref().map(|s| s.as_str()).unwrap()
     }
 }
 
-#[test]
-fn test_deployer() {
-    unsafe {
-        assert!(DEPLOYED_ADDRESS.is_none());
-        println!("DEPLOYED_ADDRESS = {:?}", get_deployed_address());
-        assert!(DEPLOYED_ADDRESS.is_some());
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deployer() {
+        unsafe {
+            assert!(DEPLOYED_ADDRESS.is_none());
+            println!("DEPLOYED_ADDRESS = {:?}", get_deployed_address());
+            assert!(DEPLOYED_ADDRESS.is_some());
+        }
     }
 }
