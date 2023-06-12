@@ -5,10 +5,11 @@ use fhe_traits::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct OracleUser {
-    address: String,
-    pk: PublicKey,
-    fhe_balance: Ciphertext,
+    pub address: String,
+    pub pk: PublicKey,
+    pub fhe_balance: Ciphertext,
 }
 
 impl OracleUser {
@@ -19,18 +20,12 @@ impl OracleUser {
             fhe_balance,
         }
     }
-
-    pub fn clone(&self) -> Self {
-        Self {
-            address: self.address.clone(),
-            pk: self.pk.clone(),
-            fhe_balance: self.fhe_balance.clone(),
-        }
-    }
 }
+
+#[derive(Clone)]
 pub struct Oracle {
-    pub(crate) users: HashMap<String, OracleUser>,
-    pub(crate) parameters: Arc<fhe::bfv::BfvParameters>,
+    pub users: HashMap<String, OracleUser>,
+    pub parameters: Arc<fhe::bfv::BfvParameters>,
 }
 
 impl Oracle {
@@ -52,6 +47,10 @@ impl Oracle {
         self.users.insert(address.to_string(), user);
     }
 
+    pub fn update_user_fhe_balance(&mut self, address: String, fhe_balance: Ciphertext) {
+        self.users.get_mut(&address).unwrap().fhe_balance = fhe_balance;
+    }
+
     pub fn return_user_fhe_balance(&self, address: String) -> Ciphertext {
         self.users[&address].fhe_balance.clone()
     }
@@ -63,7 +62,7 @@ impl Oracle {
 
 #[cfg(test)]
 mod tests {
-    use crate::fhe_crypto::fhe_oracle::{Oracle, OracleUser};
+    use crate::fhe_node::fhe_oracle::{Oracle, OracleUser};
     use fhe::bfv::{BfvParameters, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey};
     use fhe_traits::{FheDecoder, FheDecrypter, FheEncoder, FheEncrypter};
     use rand::thread_rng;
@@ -91,6 +90,6 @@ mod tests {
         let decrypted_plaintext = sk.try_decrypt(&user.fhe_balance).unwrap();
         let decrypted_vector =
             Vec::<u64>::try_decode(&decrypted_plaintext, Encoding::poly()).unwrap();
-        println!("{}'s balance: {}", user.address, decrypted_vector[0]);
+        assert_eq!(decrypted_vector[0], 0);
     }
 }
