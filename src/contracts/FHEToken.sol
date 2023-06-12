@@ -14,67 +14,50 @@ contract FHEToken is ERC20 {
         _;
     }
 
-    address payable public owner;
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "FHEToken: only owner can call this function"
+        );
+        _;
+    }
 
-    event Deposit(address indexed from, uint256 amount, string pk);
+    event Deposit(address indexed from, uint256 amount, bytes pk);
     event Withdrawal(address indexed to, uint256 amount);
     event RecvNewTx(
         uint256 indexed id,
         address indexed from,
         address indexed to,
-        string fhe_tx,
-        string proof
+        bytes fhe_tx,
+        bytes fhe_proof
     );
     event newUser(address indexed user);
+    event ReveivedEther(address indexed from, uint256 amount);
 
-    struct Tx {
-        uint256 id;
-        address from;
-        address to;
-        bytes fhe_tx;
-        string proof;
-    }
-    struct Confirmedblocks {
-        Tx[] txs;
-    }
-
+    address payable public owner;
     uint256 public last_tx_id = 0;
     uint256 public fees = 0 ether;
 
-    Tx[] public mempool;
-    mapping(uint256 => Confirmedblocks) confirmedblocks;
     mapping(address => bool) public hasUser;
 
     constructor(uint8 _decimals) ERC20("FHEToken", "FHT", _decimals) {
         owner = payable(msg.sender);
+        hasUser[msg.sender] = true;
     }
 
     function recvTx(
         address _to,
         bytes calldata _fhe_tx,
-        bytes calldata _proof
+        bytes calldata _fhe_proof
     ) public payable senderIsUser receiverIsUser(_to) {
-        require(msg.value == fees, "FHEToken: amount must be equal to fees");
+        require(
+            msg.value == fees,
+            "FHEToken_recvTx: amount must be equal to fees"
+        );
 
         last_tx_id += 1;
 
-        Tx memory recv_tx = Tx({
-            id: last_tx_id,
-            from: msg.sender,
-            to: _to,
-            fhe_tx: _fhe_tx,
-            proof: string(_proof)
-        });
-
-        mempool.push(recv_tx);
-
-        emit RecvNewTx(
-            last_tx_id,
-            msg.sender,
-            _to,
-            string(_fhe_tx),
-            string(_proof)
-        );
+        emit RecvNewTx(last_tx_id, msg.sender, _to, _fhe_tx, _fhe_proof);
     }
 
     function deposit(
@@ -89,7 +72,7 @@ contract FHEToken is ERC20 {
             emit newUser(_to);
         }
 
-        emit Deposit(_to, _amount, string(_pk));
+        emit Deposit(_to, _amount, _pk);
     }
 
     function withdrawal(uint256 _amount) public senderIsUser {
@@ -104,16 +87,8 @@ contract FHEToken is ERC20 {
         return balanceOf[_account];
     }
 
-    event ReveivedEther(address indexed from, uint256 amount);
-
     function buy_tokens(bytes calldata _pk) external payable {
         deposit(msg.sender, msg.value, _pk);
-    }
-
-    function string_to_bytes(
-        string calldata _str
-    ) public pure returns (bytes memory) {
-        return (abi.encode(_str));
     }
 
     receive() external payable {
