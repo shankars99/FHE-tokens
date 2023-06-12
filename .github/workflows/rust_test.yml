@@ -6,10 +6,26 @@ on:
 
 jobs:
   test:
-    needs: deploy
     runs-on: ubuntu-latest
-
     steps:
+      - name: Install Geth
+        run: |
+          sudo add-apt-repository -y ppa:ethereum/ethereum
+          sudo apt-get update -y
+          sudo apt-get install ethereum -y
+
+      - name: Run Geth
+        run: |
+          geth --http --http.corsdomain="https://remix.ethereum.org" --http.api web3,eth,debug,personal,net --dev console --allow-insecure-unlock
+
+      - name: Save JavaScript code
+        run: |
+          echo "const users = [..." > transferEth.js
+          echo "// Transfer ETH from..." >> transferEth.js
+          echo "    .catch((error) => {" >> transferEth.js
+          echo "        console.error('Failed to transfer ETH:', error);" >> transferEth.js
+          echo "    });" >> transferEth.js
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
