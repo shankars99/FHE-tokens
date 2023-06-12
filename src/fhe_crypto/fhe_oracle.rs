@@ -63,7 +63,7 @@ impl Oracle {
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto::fhe_oracle::{Oracle, OracleUser};
+    use crate::fhe_crypto::fhe_oracle::{Oracle, OracleUser};
     use fhe::bfv::{BfvParameters, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey};
     use fhe_traits::{FheDecoder, FheDecrypter, FheEncoder, FheEncrypter};
     use rand::thread_rng;

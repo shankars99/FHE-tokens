@@ -5,7 +5,7 @@ use fhe_traits::*;
 use rand::{rngs::OsRng, thread_rng};
 use std::sync::Arc;
 
-use crate::crypto::fhe_oracle;
+use crate::fhe_crypto::fhe_oracle;
 
 use fhe_oracle::{Oracle, OracleUser};
 
