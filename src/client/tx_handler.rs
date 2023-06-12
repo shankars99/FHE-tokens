@@ -1,12 +1,19 @@
 use ethers::abi::{decode, encode, Token};
 use fhe::bfv::{Ciphertext, Plaintext, PublicKey};
 use fhe_traits::Serialize;
-use std::process::{Command, Output};
+use std::process::Output;
 use std::str;
 
 use crate::client::fhe_deployer::get_deployed_address;
 
-fn buy_tokens_tx_sender(pk: &PublicKey, amount: u128, priv_key: &str) -> Option<String> {
+use tokio::io::AsyncReadExt;
+use tokio::process::Command;
+
+async fn buy_tokens_tx_sender(
+    pk: &PublicKey,
+    amount: u128,
+    priv_key: &str,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let deployed_address = get_deployed_address();
 
     let pk_bytes = pk.to_bytes();
@@ -21,23 +28,24 @@ fn buy_tokens_tx_sender(pk: &PublicKey, amount: u128, priv_key: &str) -> Option<
         .arg(priv_key)
         .arg("--value")
         .arg(amount.to_string())
-        .output();
+        .output()
+        .await?;
 
-    match output {
-        Ok(output) => get_tx_hash(output),
+    match get_tx_hash(output).await {
+        Ok(tx_hash) => Ok(tx_hash),
         Err(error) => {
-            println!("Failed to execute script: {}", error);
-            None
+            eprintln!("Failed to execute script: {}", error);
+            Ok(None)
         }
     }
 }
 
-fn recvtx_tx_sender(
+async fn recvtx_tx_sender(
     to_address: &str,
     fhe_tx: &str,
     fhe_proof: &str,
     priv_key: &str,
-) -> Option<String> {
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let deployed_address = get_deployed_address();
 
     let output = Command::new("/home/shankar/.foundry/bin/cast")
@@ -49,21 +57,23 @@ fn recvtx_tx_sender(
         .arg(fhe_proof)
         .arg("--private-key")
         .arg(priv_key)
-        .output();
+        .output()
+        .await?;
 
-    match output {
-        Ok(output) => get_tx_hash(output),
+    match get_tx_hash(output).await {
+        Ok(tx_hash) => Ok(tx_hash),
         Err(error) => {
-            println!("Failed to execute script: {}", error);
-            None
+            eprintln!("Failed to execute script: {}", error);
+            Ok(None)
         }
     }
 }
 
-fn get_tx_hash(output: Output) -> Option<String> {
+async fn get_tx_hash(output: Output) -> Result<Option<String>, Box<dyn std::error::Error>> {
     if output.status.success() {
-        let stdout: std::borrow::Cow<str> = String::from_utf8_lossy(&output.stdout);
-        let stdout = stdout.to_string();
+        let mut stdout = String::new();
+        tokio::io::AsyncReadExt::read_to_string(&mut &output.stdout[..], &mut stdout).await?;
+
         let tx_hash = stdout
             .split("transactionHash")
             .nth(1)
@@ -76,17 +86,17 @@ fn get_tx_hash(output: Output) -> Option<String> {
             .nth(0)
             .unwrap()
             .trim()
-            .trim_matches('\"');
+            .trim_matches('\"')
+            .to_string();
 
-        Some(tx_hash.to_string())
+        Ok(Some(tx_hash))
     } else {
-        println!("Error: {:?}", output.stderr);
-        None
+        eprintln!("Error: {:?}", output.stderr);
+        Ok(None)
     }
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use fhe::bfv::{BfvParameters, Encoding, SecretKey};
@@ -98,8 +108,8 @@ mod tests {
     use crate::fhe_node::fhe_account_handler::create_user;
     use crate::fhe_node::fhe_oracle::Oracle;
 
-    #[test]
-    fn test_buy_tokens() {
+    #[tokio::test]
+    async fn test_buy_tokens() {
         let mut rng = thread_rng();
 
         let oracle = Oracle::new();
@@ -108,13 +118,13 @@ mod tests {
         let pk = PublicKey::new(&sk, &mut rng);
 
         let priv_key = get_keys("owner").unwrap().private_key;
-        let tx_hash = buy_tokens_tx_sender(&pk, 10, priv_key);
+        let tx_hash = buy_tokens_tx_sender(&pk, 10, priv_key).await;
 
-        assert!(tx_hash.is_some());
+        assert!(tx_hash.is_ok());
     }
 
-    #[test]
-    fn test_recvtx() {
+    #[tokio::test]
+    async fn test_recvtx() {
         let mut rng = thread_rng();
 
         let oracle = Oracle::new();
@@ -129,9 +139,9 @@ mod tests {
 
         let parameters = oracle.parameters.clone();
 
-        let tx_hash = buy_tokens_tx_sender(&pk_sender, 10, priv_key.clone());
+        let tx_hash = buy_tokens_tx_sender(&pk_sender, 10, priv_key.clone()).await;
 
-        assert!(tx_hash.is_some());
+        assert!(tx_hash.is_ok());
 
         let fhe_balance: Plaintext =
             Plaintext::try_encode(&[10_u64], Encoding::poly(), &parameters).unwrap();
