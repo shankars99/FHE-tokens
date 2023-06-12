@@ -1,21 +1,19 @@
 #![allow(unused_imports, unused_variables, dead_code)]
+use crate::fhe_node::{fhe_oracle::*, fhe_tx_execution::Tx};
 
 use fhe::bfv::{BfvParametersBuilder, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey};
 use fhe_traits::*;
 use rand::{rngs::OsRng, thread_rng};
 use std::sync::Arc;
 
-use crate::fhe_crypto::fhe_oracle;
-
-use fhe_oracle::{Oracle, OracleUser};
-
+#[derive(Clone)]
 pub struct User {
-    address: String,
-    key_path: String,
-    der_key: String,
-    sk: SecretKey,
-    pk: PublicKey,
-    fhe_balance: Ciphertext,
+    pub address: String,
+    pub key_path: String,
+    pub der_key: String,
+    pub sk: SecretKey,
+    pub pk: PublicKey,
+    pub fhe_balance: Ciphertext,
 }
 
 impl User {
@@ -37,59 +35,44 @@ impl User {
         }
     }
 
-    fn update_fhe_balance(&mut self, new_fhe_balance: Ciphertext) {
-        self.fhe_balance = new_fhe_balance;
-    }
+    fn create_tx(
+        &self,
+        receiver: User,
+        oracle: &Oracle,
+        value: u64,
+        parameters: Arc<fhe::bfv::BfvParameters>,
+    ) -> Tx {
+        let sender = self.clone();
 
-    fn clone(&self) -> Self {
-        Self {
-            address: self.address.clone(),
-            key_path: self.key_path.clone(),
-            der_key: self.der_key.clone(),
-            sk: self.sk.clone(),
-            pk: self.pk.clone(),
-            fhe_balance: self.fhe_balance.clone(),
-        }
+        let mut rng = thread_rng();
+
+        assert!(user_balance(&sender) >= value, "Insufficient funds");
+        assert!(value > 0, "Value must be greater than 0");
+
+        let fhe_value = Plaintext::try_encode(&[value], Encoding::poly(), &parameters).unwrap();
+
+        let txs: [Ciphertext; 2] = [
+            sender.pk.try_encrypt(&fhe_value, &mut rng).unwrap(),
+            receiver.pk.try_encrypt(&fhe_value, &mut rng).unwrap(),
+        ];
+
+        Tx::new(
+            self.address.clone(),
+            receiver.address.clone(),
+            txs[0].clone(),
+            txs[1].clone(),
+        )
     }
 }
 
-fn create_tx(
-    oracle: &Oracle,
-    sender: User,
-    receiver: User,
-    value: u64,
-    parameters: Arc<fhe::bfv::BfvParameters>,
-) -> (Ciphertext, Ciphertext) {
-    let mut rng = thread_rng();
-
-    assert!(user_balance(&sender) >= value, "Insufficient funds");
-    assert!(value > 0, "Value must be greater than 0");
-
-    let fhe_value = Plaintext::try_encode(&[value], Encoding::poly(), &parameters).unwrap();
-
-    let new_fhe_balance_receiver =
-        &receiver.fhe_balance + &receiver.pk.try_encrypt(&fhe_value, &mut rng).unwrap();
-
-    let new_fhe_balance_sender =
-        &sender.fhe_balance - &sender.pk.try_encrypt(&fhe_value, &mut rng).unwrap();
-
-    let mut sender = sender; // Make sender mutable
-    let mut receiver = receiver; // Make receiver mutable
-    sender.update_fhe_balance(new_fhe_balance_sender);
-    receiver.update_fhe_balance(new_fhe_balance_receiver);
-
-    (sender.fhe_balance.clone(), receiver.fhe_balance.clone())
-}
-
-fn user_balance(user: &User) -> u64 {
+pub fn user_balance(user: &User) -> u64 {
     let decrypted_plaintext = user.sk.try_decrypt(&user.fhe_balance).unwrap();
     let decrypted_vector = Vec::<u64>::try_decode(&decrypted_plaintext, Encoding::poly()).unwrap();
-    println!("{}'s balance: {}", user.address, decrypted_vector[0]);
 
     decrypted_vector[0]
 }
 
-pub(crate) fn create_user(
+pub fn create_user(
     address: String,
     parameters: Arc<fhe::bfv::BfvParameters>,
     der_key: Option<String>,
@@ -176,20 +159,25 @@ mod test {
 
         let (fhe_oracle, alice, bob) = setup(init_alice_balance, init_bob_balance);
 
-        let (new_fhe_balance_alice, new_fhe_balance_bob) = create_tx(
-            &fhe_oracle,
-            alice.clone(),
+        let txs = alice.create_tx(
             bob.clone(),
+            &fhe_oracle,
             delta_balance,
             fhe_oracle.parameters.clone(),
         );
+
+        let fhe_oracle = txs.execute_tx(&mut fhe_oracle.clone());
+
+        let alice_oracle = fhe_oracle.users[&alice.address].clone();
+        let bob_oracle = fhe_oracle.users[&bob.address].clone();
+
         let alice = User {
-            fhe_balance: new_fhe_balance_alice,
+            fhe_balance: alice_oracle.fhe_balance,
             ..alice
         };
 
         let bob = User {
-            fhe_balance: new_fhe_balance_bob,
+            fhe_balance: bob_oracle.fhe_balance,
             ..bob
         };
 
@@ -197,6 +185,7 @@ mod test {
             user_balance(&alice) == init_alice_balance - delta_balance,
             "Alice's balance is incorrect"
         );
+
         assert!(
             user_balance(&bob) == init_bob_balance + delta_balance,
             "Bob's balance is incorrect"
