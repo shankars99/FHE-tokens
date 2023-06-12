@@ -12,14 +12,23 @@ mod client {
     pub(crate) mod tx_handler;
 }
 
-mod crypto {
-    pub(crate) mod fhe_compute_handler;
+mod fhe_node {
+    pub(crate) mod fhe_account_handler;
     pub(crate) mod fhe_oracle;
+    mod fhe_tx_execution;
 }
 
-use client::event_handler::*;
-use crypto::fhe_oracle::*;
+use client::{account_handler::*, event_handler::*};
+use fhe_node::{fhe_account_handler::*, fhe_oracle::*};
 
 fn main() {
     println!("Hello, world!")
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test() {
+        assert_eq!(1, 1);
+    }
 }
