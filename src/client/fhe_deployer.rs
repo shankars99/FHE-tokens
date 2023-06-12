@@ -61,7 +61,7 @@ mod tests {
     fn test_deployer() {
         unsafe {
             assert!(DEPLOYED_ADDRESS.is_none());
-            println!("DEPLOYED_ADDRESS = {:?}", get_deployed_address());
+            get_deployed_address();
             assert!(DEPLOYED_ADDRESS.is_some());
         }
     }

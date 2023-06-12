@@ -24,7 +24,6 @@ pub async fn deposit_event_handler(url: &str, contract_addr: &str, start_block: 
     for log in logs.iter() {
         let from = Address::from(log.topics[1]);
 
-        println!("from = {}", from);
         let decoded: Vec<Token> = decode(&[ParamType::Uint(256), ParamType::String], &log.data)?;
         for token in decoded {
             match token {
