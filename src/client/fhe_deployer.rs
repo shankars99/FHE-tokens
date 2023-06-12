@@ -45,7 +45,6 @@ pub fn get_deployed_address() -> &'static str {
     unsafe {
         if DEPLOYED_ADDRESS.is_none() {
             // The contract isn't deployed yet, so deploy it
-            println!("Deploying contract...");
             let owner = get_keys("owner").unwrap();
             deployer(owner.public_key);
         }

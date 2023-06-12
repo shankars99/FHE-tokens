@@ -1,5 +1,8 @@
 #![allow(unused_imports, unused_variables, dead_code)]
-use crate::fhe_node::{fhe_oracle::*, fhe_tx_execution::Tx};
+use crate::{
+    client::account_handler::get_keys,
+    fhe_node::{fhe_oracle::*, fhe_tx_execution::Tx},
+};
 
 use fhe::bfv::{BfvParametersBuilder, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey};
 use fhe_traits::*;
@@ -100,13 +103,13 @@ fn setup(alice_balance: u64, bob_balance: u64) -> (Oracle, User, User) {
     let parameters = fhe_oracle.parameters.clone();
 
     let alice = create_user(
-        "alice".to_string(),
+        get_keys("alice").unwrap().public_key.to_string(),
         parameters.clone(),
         None,
         Some(alice_balance),
     );
     let bob = create_user(
-        "bob".to_string(),
+        get_keys("bob").unwrap().public_key.to_string(),
         parameters.clone(),
         None,
         Some(bob_balance),
