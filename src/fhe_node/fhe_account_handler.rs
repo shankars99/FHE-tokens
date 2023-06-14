@@ -60,6 +60,7 @@ impl User {
         ];
 
         Tx::new(
+            String::new(),
             self.address.clone(),
             receiver.address.clone(),
             txs[0].clone(),
