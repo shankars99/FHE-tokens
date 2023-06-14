@@ -55,4 +55,12 @@ contract ERC20Test is Test {
         bool malloryExists = callableFHEToken.hasUser(mallory);
         assertEq(malloryExists, false);
     }
+
+    function testWithdrawFromUsersPass() public {
+        bool aliceExists = callableFHEToken.hasUser(alice);
+        assertEq(aliceExists, true);
+
+        bool bobExists = callableFHEToken.hasUser(bob);
+        assertEq(bobExists, true);
+    }
 }

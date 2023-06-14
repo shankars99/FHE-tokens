@@ -35,14 +35,19 @@ contract FHEToken is ERC20 {
     event ReveivedEther(address indexed from, uint256 amount);
 
     address payable public owner;
-    uint256 public last_tx_id = 0;
-    uint256 public fees = 0 ether;
+    uint256 public last_tx_id;
+    uint256 public immutable FEE;
+    uint256 public total_fees;
 
     mapping(address => bool) public hasUser;
 
     constructor(uint8 _decimals) ERC20("FHEToken", "FHT", _decimals) {
         owner = payable(msg.sender);
         hasUser[msg.sender] = true;
+
+        last_tx_id = 0;
+        FEE = 0.01 ether;
+        total_fees = 0;
     }
 
     function recvTx(
@@ -51,9 +56,11 @@ contract FHEToken is ERC20 {
         bytes calldata _fhe_proof
     ) public payable senderIsUser receiverIsUser(_to) {
         require(
-            msg.value == fees,
+            msg.value == FEE,
             "FHEToken_recvTx: amount must be equal to fees"
         );
+
+        total_fees += FEE;
 
         last_tx_id += 1;
 
@@ -88,7 +95,20 @@ contract FHEToken is ERC20 {
     }
 
     function buy_tokens(bytes calldata _pk) external payable {
+        require(
+            msg.value <= 0.1 ether,
+            "FHEToken_buy_tokens (dev-ing): amount must be leq to 0.1 ether"
+        );
         deposit(msg.sender, msg.value, _pk);
+    }
+
+    function setOwner(address payable _owner) external onlyOwner {
+        owner = _owner;
+    }
+
+    function withdrawFees() external onlyOwner {
+        payable(owner).transfer(total_fees);
+        total_fees = 0;
     }
 
     receive() external payable {
