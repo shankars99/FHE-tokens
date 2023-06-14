@@ -12,7 +12,7 @@ use tokio::process::Command;
 async fn buy_tokens_tx_sender(
     pk: &PublicKey,
     amount: u128,
-    priv_key: &str,
+    priv_key: &String,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let deployed_address = get_deployed_address();
 
@@ -40,11 +40,11 @@ async fn buy_tokens_tx_sender(
     }
 }
 
-async fn recvtx_tx_sender(
+pub async fn recvtx_tx_sender(
     to_address: &str,
     fhe_tx: &str,
     fhe_proof: &str,
-    priv_key: &str,
+    priv_key: &String,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let deployed_address = get_deployed_address();
 
@@ -114,11 +114,17 @@ mod tests {
 
         let oracle = Oracle::new();
 
-        let sk = SecretKey::random(&oracle.parameters, &mut rng);
-        let pk = PublicKey::new(&sk, &mut rng);
+        let owner = create_user(
+            get_keys("owner").unwrap().public_key.to_string(),
+            oracle.parameters.clone(),
+            None,
+            Some(0),
+        );
 
-        let priv_key = get_keys("owner").unwrap().private_key;
-        let tx_hash = buy_tokens_tx_sender(&pk, 10, priv_key).await;
+        let priv_key = get_keys("owner").unwrap().private_key.to_string();
+        let pk = owner.pk.clone();
+
+        let tx_hash = buy_tokens_tx_sender(&pk, 10, &priv_key).await;
 
         assert!(tx_hash.is_ok());
     }
@@ -135,11 +141,11 @@ mod tests {
         let sk_receiver = SecretKey::random(&oracle.parameters, &mut rng);
         let pk_receiver = PublicKey::new(&sk_receiver, &mut rng);
 
-        let priv_key = get_keys("alice").unwrap().private_key;
+        let priv_key = get_keys("alice").unwrap().private_key.to_string();
 
         let parameters = oracle.parameters.clone();
 
-        let tx_hash = buy_tokens_tx_sender(&pk_sender, 10, priv_key.clone()).await;
+        let tx_hash = buy_tokens_tx_sender(&pk_sender, 10, &priv_key).await;
 
         assert!(tx_hash.is_ok());
 
