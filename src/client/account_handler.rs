@@ -41,3 +41,44 @@ pub fn get_keys(user: &str) -> Option<KeyPair> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+pub(crate) mod tests {
+    // creates alice and bob, adds then to the oracle and returns the oracle and returns them
+    use super::*;
+    use crate::fhe_node::{
+        fhe_account_handler::{create_user, User},
+        fhe_oracle::{Oracle, OracleUser},
+    };
+
+    pub fn create_users(alice_balance: u64, bob_balance: u64) -> (Oracle, User, User, User) {
+        let mut oracle = Oracle::new();
+
+        let owner = create_user(
+            get_keys("owner").unwrap().public_key.to_string(),
+            oracle.parameters.clone(),
+            None,
+            Some(100),
+        );
+
+        let alice = create_user(
+            get_keys("alice").unwrap().public_key.to_string(),
+            oracle.parameters.clone(),
+            None,
+            Some(alice_balance),
+        );
+
+        let bob = create_user(
+            get_keys("bob").unwrap().public_key.to_string(),
+            oracle.parameters.clone(),
+            None,
+            Some(bob_balance),
+        );
+
+        oracle.add_user(owner.address.clone(), OracleUser::from_user(owner.clone()));
+        oracle.add_user(alice.address.clone(), OracleUser::from_user(alice.clone()));
+        oracle.add_user(bob.address.clone(), OracleUser::from_user(bob.clone()));
+
+        (oracle, alice, bob, owner)
+    }
+}
