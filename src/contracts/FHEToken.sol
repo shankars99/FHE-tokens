@@ -4,12 +4,7 @@ pragma solidity ^0.8.17;
 import "lib/solmate/src/tokens/ERC20.sol";
 
 contract FHEToken is ERC20 {
-    modifier receiverIsUser(address _receiver) {
-        require(hasUser[_receiver] == true, "FHEToken: receiver is not a user");
-        _;
-    }
-
-    modifier senderIsUser() {
+    modifier onlyUser() {
         require(hasUser[msg.sender] == true, "FHEToken: sender is not a user");
         _;
     }
@@ -28,43 +23,81 @@ contract FHEToken is ERC20 {
         uint256 indexed id,
         address indexed from,
         address indexed to,
-        bytes fhe_tx,
+        bytes32 fhe_tx_hash,
+        bytes fhe_tx_sender,
+        bytes fhe_tx_receiver,
         bytes fhe_proof
     );
     event newUser(address indexed user);
     event ReveivedEther(address indexed from, uint256 amount);
 
     address payable public owner;
-    uint256 public last_tx_id;
+    uint256 public block_tx;
     uint256 public immutable FEE;
     uint256 public total_fees;
-
+    uint256 public blocks;
     mapping(address => bool) public hasUser;
 
     constructor(uint8 _decimals) ERC20("FHEToken", "FHT", _decimals) {
         owner = payable(msg.sender);
         hasUser[msg.sender] = true;
 
-        last_tx_id = 0;
+        block_tx = 0;
         FEE = 0.01 ether;
         total_fees = 0;
+        blocks = 0;
     }
 
     function recvTx(
-        address _to,
-        bytes calldata _fhe_tx,
+        string calldata _to,
+        bytes calldata _fhe_tx_sender,
+        bytes calldata _fhe_tx_receiver,
         bytes calldata _fhe_proof
-    ) public payable senderIsUser receiverIsUser(_to) {
+    ) external payable onlyUser {
         require(
             msg.value == FEE,
             "FHEToken_recvTx: amount must be equal to fees"
         );
 
+        address _receiver = address(0);
+
+        if (bytes(_to).length != 0) {
+            _receiver = payable(
+                address(uint160(uint256(keccak256(abi.encodePacked(_to)))))
+            );
+        }
+
+        _recvTx(_receiver, _fhe_tx_sender, _fhe_tx_receiver, _fhe_proof);
         total_fees += FEE;
 
-        last_tx_id += 1;
+        block_tx += 1;
+    }
 
-        emit RecvNewTx(last_tx_id, msg.sender, _to, _fhe_tx, _fhe_proof);
+    function _recvTx(
+        address _to,
+        bytes calldata _fhe_tx_sender,
+        bytes calldata _fhe_tx_receiver,
+        bytes calldata _fhe_proof
+    ) internal {
+        bytes32 _fhe_tx_hash = keccak256(
+            abi.encodePacked(
+                msg.sender,
+                _to,
+                _fhe_tx_sender,
+                _fhe_tx_receiver,
+                block.number
+            )
+        );
+
+        emit RecvNewTx(
+            block_tx,
+            msg.sender,
+            _to,
+            _fhe_tx_hash,
+            _fhe_tx_sender,
+            _fhe_tx_receiver,
+            _fhe_proof
+        );
     }
 
     function deposit(
@@ -82,7 +115,12 @@ contract FHEToken is ERC20 {
         emit Deposit(_to, _amount, _pk);
     }
 
-    function withdrawal(uint256 _amount) public senderIsUser {
+    function new_block() external onlyOwner {
+        blocks += 1;
+        block_tx = 0;
+    }
+
+    function withdrawal(uint256 _amount) public onlyUser {
         _burn(msg.sender, _amount);
 
         payable(msg.sender).transfer(_amount);
