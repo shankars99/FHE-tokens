@@ -1,10 +1,10 @@
+use crate::fhe_node::fhe_account_handler::User;
 use fhe::bfv::{
     BfvParameters, BfvParametersBuilder, Ciphertext, Encoding, Plaintext, PublicKey, SecretKey,
 };
 use fhe_traits::*;
 use std::collections::HashMap;
 use std::sync::Arc;
-
 #[derive(Clone)]
 pub struct OracleUser {
     pub address: String,
@@ -18,6 +18,14 @@ impl OracleUser {
             address,
             pk,
             fhe_balance,
+        }
+    }
+
+    pub fn from_user(user: User) -> Self {
+        Self {
+            address: user.address,
+            pk: user.pk,
+            fhe_balance: user.fhe_balance,
         }
     }
 }
