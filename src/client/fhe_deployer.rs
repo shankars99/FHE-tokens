@@ -4,8 +4,9 @@ use std::str;
 
 // store the deployed address so that we can use it in other tests
 static mut DEPLOYED_ADDRESS: Option<String> = None;
-static mut DEPLOYED_BLOCK: Option<u64> = None;
+pub const DEPLOYED_BLOCK: u64 = 0;
 pub const URL: &str = "http://127.0.0.1:8545";
+pub const FEE: &str = "0.01ether";
 
 // executes forge create src/contracts/FHEToken.sol:FHEToken --constructor-args 8 --unlocked --from <owner>
 fn deployer(owner: &str) -> Option<String> {
@@ -21,7 +22,7 @@ fn deployer(owner: &str) -> Option<String> {
         .expect("Failed to execute script");
 
     if output.status.success() {
-        let stdout = str::from_utf8(&output.stdout).unwrap().trim().to_string();
+        let stdout = str::from_utf8(&output.stdout).unwrap();
         let deployed_to_line = stdout.lines().find(|line| line.starts_with("Deployed to:"));
         if let Some(deployed_to_line) = deployed_to_line {
             let deployed_to = deployed_to_line
@@ -32,16 +33,6 @@ fn deployer(owner: &str) -> Option<String> {
 
             unsafe {
                 DEPLOYED_ADDRESS = Some(deployed_to.clone());
-            }
-
-            if let Some(block) = stdout
-                .lines()
-                .find(|line| line.starts_with("Block:"))
-                .map(|line| line.split(":").nth(1).unwrap().trim().to_string())
-            {
-                unsafe {
-                    DEPLOYED_BLOCK = Some(block.parse::<u64>().unwrap());
-                }
             }
 
             return Some(deployed_to);
@@ -63,10 +54,6 @@ pub fn get_deployed_address() -> &'static str {
         }
         DEPLOYED_ADDRESS.as_ref().map(|s| s.as_str()).unwrap()
     }
-}
-
-pub fn get_deployed_block() -> u64 {
-    unsafe { DEPLOYED_BLOCK.unwrap() }
 }
 
 #[cfg(test)]
