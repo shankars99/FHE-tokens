@@ -52,33 +52,33 @@ pub(crate) mod tests {
     };
 
     pub fn create_users(alice_balance: u64, bob_balance: u64) -> (Oracle, User, User, User) {
-        let mut oracle = Oracle::new();
+        let mut fhe_oracle = Oracle::new();
 
         let owner = create_user(
             get_keys("owner").unwrap().public_key.to_string(),
-            oracle.parameters.clone(),
+            fhe_oracle.parameters.clone(),
             None,
             Some(100),
         );
 
         let alice = create_user(
             get_keys("alice").unwrap().public_key.to_string(),
-            oracle.parameters.clone(),
+            fhe_oracle.parameters.clone(),
             None,
             Some(alice_balance),
         );
 
         let bob = create_user(
             get_keys("bob").unwrap().public_key.to_string(),
-            oracle.parameters.clone(),
+            fhe_oracle.parameters.clone(),
             None,
             Some(bob_balance),
         );
 
-        oracle.add_user(owner.address.clone(), OracleUser::from_user(owner.clone()));
-        oracle.add_user(alice.address.clone(), OracleUser::from_user(alice.clone()));
-        oracle.add_user(bob.address.clone(), OracleUser::from_user(bob.clone()));
+        fhe_oracle.add_user(owner.address.clone(), OracleUser::from_user(owner.clone()));
+        fhe_oracle.add_user(alice.address.clone(), OracleUser::from_user(alice.clone()));
+        fhe_oracle.add_user(bob.address.clone(), OracleUser::from_user(bob.clone()));
 
-        (oracle, alice, bob, owner)
+        (fhe_oracle, alice, bob, owner)
     }
 }
