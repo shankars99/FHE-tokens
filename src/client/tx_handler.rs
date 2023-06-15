@@ -11,8 +11,8 @@ use tokio::process::Command;
 
 async fn buy_tokens_tx_sender(
     pk: &PublicKey,
-    amount: u128,
     priv_key: &String,
+    amount: &String,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let deployed_address = get_deployed_address();
 
@@ -27,7 +27,7 @@ async fn buy_tokens_tx_sender(
         .arg("--private-key")
         .arg(priv_key)
         .arg("--value")
-        .arg(amount.to_string())
+        .arg(amount)
         .output()
         .await?;
 
@@ -40,23 +40,37 @@ async fn buy_tokens_tx_sender(
     }
 }
 
+/*
+function recvTx(
+        string calldata _to,
+        bytes calldata _fhe_tx_sender,
+        bytes calldata _fhe_tx_receiver,
+        bytes calldata _fhe_proof
+    )
+*/
+
 pub async fn recvtx_tx_sender(
     to_address: &str,
-    fhe_tx: &str,
+    fhe_tx_sender: &str,
+    fhe_tx_receiver: &str,
     fhe_proof: &str,
     priv_key: &String,
+    amount: &String,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let deployed_address = get_deployed_address();
 
     let output = Command::new("/home/shankar/.foundry/bin/cast")
         .arg("send")
         .arg(deployed_address)
-        .arg("recvTx(address,bytes,bytes)")
+        .arg("recvTx(address,bytes,bytes,bytes)")
         .arg(to_address)
-        .arg(fhe_tx)
+        .arg(fhe_tx_sender)
+        .arg(fhe_tx_receiver)
         .arg(fhe_proof)
         .arg("--private-key")
         .arg(priv_key)
+        .arg("--value")
+        .arg(amount)
         .output()
         .await?;
 
@@ -104,58 +118,51 @@ mod tests {
     use rand::thread_rng;
     use std::sync::Arc;
 
-    use crate::client::account_handler::get_keys;
-    use crate::fhe_node::fhe_account_handler::create_user;
-    use crate::fhe_node::fhe_oracle::Oracle;
-
+    use crate::client::{
+        account_handler::{get_keys, tests::create_users},
+        fhe_deployer::FEE,
+    };
+    use crate::fhe_node::{
+        fhe_account_handler::create_user, fhe_oracle::Oracle, fhe_tx_execution::Tx,
+    };
     #[tokio::test]
     async fn test_buy_tokens() {
-        let mut rng = thread_rng();
+        let rng = thread_rng();
 
-        let oracle = Oracle::new();
-
-        let owner = create_user(
-            get_keys("owner").unwrap().public_key.to_string(),
-            oracle.parameters.clone(),
-            None,
-            Some(0),
-        );
+        let (fhe_oracle, alice, bob, owner) = create_users(100, 50);
 
         let priv_key = get_keys("owner").unwrap().private_key.to_string();
         let pk = owner.pk.clone();
 
-        let tx_hash = buy_tokens_tx_sender(&pk, 10, &priv_key).await;
-
+        let tx_hash = buy_tokens_tx_sender(&pk, &priv_key, &FEE.to_string()).await;
         assert!(tx_hash.is_ok());
     }
 
     #[tokio::test]
     async fn test_recvtx() {
-        let mut rng = thread_rng();
+        let rng = thread_rng();
 
-        let oracle = Oracle::new();
+        let (fhe_oracle, alice, bob, owner) = create_users(100, 50);
 
-        let sk_sender = SecretKey::random(&oracle.parameters, &mut rng);
-        let pk_sender = PublicKey::new(&sk_sender, &mut rng);
+        let priv_key = get_keys("owner").unwrap().private_key.to_string();
+        let pk = owner.pk.clone();
 
-        let sk_receiver = SecretKey::random(&oracle.parameters, &mut rng);
-        let pk_receiver = PublicKey::new(&sk_receiver, &mut rng);
+        let tx_hash = buy_tokens_tx_sender(&pk, &priv_key, &FEE.to_string()).await;
 
-        let priv_key = get_keys("alice").unwrap().private_key.to_string();
+        let tx = alice.create_tx(bob.clone(), &fhe_oracle, 10);
 
-        let parameters = oracle.parameters.clone();
+        let (tx_sender, tx_receiver) = tx.serialize_ct_tx_string();
 
-        let tx_hash = buy_tokens_tx_sender(&pk_sender, 10, &priv_key).await;
+        let tx_hash = recvtx_tx_sender(
+            &bob.address.clone(),
+            &tx_sender,
+            &tx_receiver,
+            &tx.tx_proof,
+            &priv_key,
+            &FEE.to_string(),
+        )
+        .await;
 
         assert!(tx_hash.is_ok());
-
-        let fhe_balance: Plaintext =
-            Plaintext::try_encode(&[10_u64], Encoding::poly(), &parameters).unwrap();
-        let fhe_balance: Ciphertext = sk_sender.try_encrypt(&fhe_balance, &mut rng).unwrap();
-
-        let fhe_proof: Plaintext =
-            Plaintext::try_encode(&[10_u64], Encoding::poly(), &parameters).unwrap();
-
-        let fhe_proof: Ciphertext = sk_sender.try_encrypt(&fhe_proof, &mut rng).unwrap();
     }
 }
