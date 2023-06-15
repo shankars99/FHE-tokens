@@ -15,7 +15,7 @@ mod client {
 mod fhe_node {
     pub(crate) mod fhe_account_handler;
     pub(crate) mod fhe_oracle;
-    mod fhe_tx_execution;
+    pub(crate) mod fhe_tx_execution;
 }
 
 use client::{account_handler::*, event_handler::*};
