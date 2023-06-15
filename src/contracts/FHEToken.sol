@@ -21,9 +21,9 @@ contract FHEToken is ERC20 {
     event Withdrawal(address indexed to, uint256 amount);
     event RecvNewTx(
         uint256 indexed id,
+        bytes32 fhe_tx_hash,
         address indexed from,
         address indexed to,
-        bytes32 fhe_tx_hash,
         bytes fhe_tx_sender,
         bytes fhe_tx_receiver,
         bytes fhe_proof
@@ -91,9 +91,9 @@ contract FHEToken is ERC20 {
 
         emit RecvNewTx(
             block_tx,
+            _fhe_tx_hash,
             msg.sender,
             _to,
-            _fhe_tx_hash,
             _fhe_tx_sender,
             _fhe_tx_receiver,
             _fhe_proof
